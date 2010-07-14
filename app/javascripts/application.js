@@ -203,3 +203,8 @@ Group = {
     Element.update('handle',title)
   }
 }
+
+document.on('click', 'a.closeThis', function(e) {
+    e.preventDefault()
+    this.parentNode.setStyle('display: none')
+})
