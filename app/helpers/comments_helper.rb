@@ -1,10 +1,12 @@
 module CommentsHelper
 
-  def cache_editable_comment(comment, &block)
+  def cache_editable_comment(comment, threaded, simpleconv, &block)
     cache(comment.cache_key.tap { |key|
       key << "-#{comment.user.avatar_updated_at.to_i}-#{comment.project.permalink}"
       key << '-editable' if comment.can_edit?(current_user)
       key << '-destructable' if comment.can_destroy?(current_user)
+      key << '-threaded' if threaded
+      key << '-simpleconv' if simpleconv
       key << ".#{request.format}"
     }, &block)
   end
@@ -102,6 +104,7 @@ module CommentsHelper
   def new_comment_form(project,comment,options={})
     message = options[:message] ||= nil
     target  = options[:target]  ||= nil
+    thread  = options[:thread]  ||= nil
     if target.nil?
       form_url = [project,comment]
     elsif target.is_a?(Task)
@@ -114,7 +117,8 @@ module CommentsHelper
         :locals => { :target => target,
           :message => message,
           :form_url => form_url, 
-          :comment => comment }
+          :comment => comment,
+          :thread => thread }
     end
   end
   
@@ -217,9 +221,10 @@ module CommentsHelper
     id = "#{js_id(target)}_#{status_type}_comments_count"
   end
 
-  def make_autocompletable(element_id)
+  def make_autocompletable(element_id, project = nil)
+    project ||= @current_project
     base_list = ["'@all <span class=\"informal\">#{t('conversations.watcher_fields.people_all')}</span>'"]
-    people_list = (base_list + @current_project.people.map{|m| "'@#{m.login} <span class=\"informal\">#{h(m.name)}</span>'"}).join(',')
+    people_list = (base_list + project.people.map{|m| "'@#{m.login} <span class=\"informal\">#{h(m.name)}</span>'"}).join(',')
     javascript_tag "Comment.make_autocomplete('comment_body', [#{people_list}]);"
   end
 
@@ -232,6 +237,10 @@ module CommentsHelper
     end
 
     f.text_area :body, :class => 'comment_body', :id => 'comment_body', :placeholder => placeholder
+  end
+
+  def paint_status_boxes
+    javascript_tag "Comment.paint_status_boxes()"
   end
 
 end

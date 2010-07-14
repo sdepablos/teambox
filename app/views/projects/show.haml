@@ -3,15 +3,10 @@
     = list_pending_invites(@pending_projects)
 
 - if @current_project.commentable?(current_user) && @current_project.archived == false
-  %h2
-    = t('.update_your_status')
-    %span.help
-      = formatting_documentation_link
-
   = new_comment_form(@current_project,@current_project.comments.new)
 
 #activities
-  = list_activities(@activities)
+  = list_threads(@threads)
   = show_more_button(@activities)
 = javascript_tag autorefresh(@activities, @current_project)
   

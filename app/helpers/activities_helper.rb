@@ -35,6 +35,18 @@ module ActivitiesHelper
     activities.map { |activity| show_activity(activity) }.join('')
   end
 
+  def list_threads(activities)
+    activities.map { |activity| show_threaded_activity(activity) }.join('')
+  end
+
+  def show_threaded_activity(activity)
+    if activity.thread.is_a?(Task) || activity.thread.is_a?(Conversation)
+      render :partial => 'activities/thread', :locals => { :activity => activity }
+    else
+      show_activity(activity)
+    end
+  end
+
   def show_activity(activity)
     if activity.target && ActivityTypes.include?(activity.action_type)
       render "activities/#{activity.action_type}", :activity => activity,
@@ -175,7 +187,7 @@ module ActivitiesHelper
     else
       raise "unexpected location #{location_name}"
     end
-    link_to_remote content_tag(:span, t('common.show_more', :number => APP_CONFIG['activities_per_page'])),
+    link_to_remote content_tag(:span, t('common.show_more')),
       :url => url,
       :loading => activities_paginate_loading,
       :html => {
@@ -187,6 +199,12 @@ module ActivitiesHelper
     update_page do |page|
       page['activity_paginate_link'].hide
       page['activity_paginate_loading'].show
+    end
+  end
+
+  def full_thread_loading(thread_id)
+    update_page do |page|
+      page["#{thread_id}_more_comments"].show
     end
   end
 

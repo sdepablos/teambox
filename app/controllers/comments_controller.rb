@@ -14,7 +14,23 @@ class CommentsController < ApplicationController
       @comment = current_user.new_comment(current_user,@target,params[:comment])
     end
 
-    @comment.save
+    # If this is a status update, we'll turn it in a new `simple` Conversation
+    if @comment.target.is_a?(Project)
+      conversation = @current_project.new_conversation(current_user, :simple => true )
+      conversation.body = @comment.body
+      if conversation.save
+        comment = conversation.comments.last
+        comment.uploads = @comment.uploads
+        comment.save
+        @comment = comment
+      else
+        @comment.errors.add(:body, :no_body_generic)
+      end
+      @new_conversation = true
+    else
+      @comment.save
+    end
+
     @target = @comment.target
 
     # Evaluate target
@@ -39,6 +55,11 @@ class CommentsController < ApplicationController
     end
 
     respond_to do |f|
+      if (@threaded = params[:thread] == "true") || @new_conversation # Comment from Overview
+        @comment.activity = Activity.first(:conditions => {:target_type => "Comment", :target_id => @comment.id})
+        redirect_path = request.referer
+      end
+
       if !@comment.new_record?
         # success!
         f.html { redirect_to redirect_path }
@@ -56,6 +77,7 @@ class CommentsController < ApplicationController
   end
 
   def show
+    @threaded = params[:thread] == "true"
     respond_to do |f|
       f.js
       f.xml { render :xml => @comment.to_xml }
@@ -66,11 +88,13 @@ class CommentsController < ApplicationController
 
   def edit
     @edit_part = params[:part]
+    @threaded = params[:thread] == "true"
     respond_to{|f|f.js}
   end
 
   def update
     @has_permission and @saved = @comment.update_attributes(params[:comment])
+    @threaded = params[:thread] == "true"
     
     if @saved
       respond_to do |f|
